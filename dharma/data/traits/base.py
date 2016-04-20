@@ -1,7 +1,11 @@
 # -*- coding: utf-8 -*-
 import six
 
-from dharma.data.exceptions import TraitValidationError
+from dharma.data.exceptions import (
+    TraitPreprocessorError,
+    TraitValidationError,
+)
+from dharma.data.context import get_context
 from dharma.utils import get_func_name, is_argspec_valid, OrderedSet, Sentinel
 from .validation import construct_validators
 
@@ -21,6 +25,8 @@ _INVALID_SIGN_MSG = (
 # sentinel object for expressing that a value of a trait hasn't been set
 # NB: None object might be a valid value set on a trait
 undefined_value = Sentinel('undefined_value', 'dharma.data.traits')
+# validation context
+context = get_context()
 
 
 class Trait(object):
@@ -123,7 +129,8 @@ class Trait(object):
             new_value = self.preprocessor(new_value)
         if new_value != old_value:
             # logic fires only in the case when the value changes
-            self.validate(instance, new_value)
+            if context.is_to_be_validated(instance, self._label):
+                self.validate(instance, old_value, new_value)
             # the new value is assumed to be valid
             self._set_value(instance, new_value)
             # notify listeners about the change done
